@@ -187,6 +187,44 @@ def atualiza_descartado(df_remover):
 
 
 
+def unifica_registros_por_imagem(imagem_mantida, imagem_removida):
+    
+    # Verifica se o CSV existe
+    if not Path(caminho_base_posts).exists():
+        print(f"Arquivo CSV não encontrado: {caminho_base_posts}")
+        return
+
+    # Carrega o CSV
+    df = pd.read_csv(caminho_base_posts)
+    
+    # Verifica se ambas as imagens existem no CSV
+    if imagem_mantida not in df["nome_imagem"].values or imagem_removida not in df["nome_imagem"].values:
+        print("Uma ou ambas as imagens não estão no CSV.")
+        return
+
+    # Recupera os registros
+    registro_mantido = df[df["nome_imagem"] == imagem_mantida].iloc[0]
+    registro_removido = df[df["nome_imagem"] == imagem_removida].iloc[0]
+
+    # Unifica as características e o rótulo (evita duplicar informações)
+    caracteristicas_mantidas = str(registro_mantido.get("Content", ""))
+    caracteristicas_removidas = str(registro_removido.get("Content", ""))
+    novas_caracteristicas = "; ".join(filter(None, {caracteristicas_mantidas, caracteristicas_removidas}))
+    if classificar_texto(novas_caracteristicas) == 'relacionado':    
+        # Atualiza o registro mantido
+        df.loc[df["nome_imagem"] == imagem_mantida, "Content"] = novas_caracteristicas
+    else:
+        # Um dos textos é nao-relacionado, assim, precisa ser removido da base_posts    
+        df = df[df["nome_imagem"] != imagem_mantida]
+
+    # Remove o registro 
+    df = df[df["nome_imagem"] != imagem_removida]
+
+
+    # Salva o CSV atualizado
+    df.to_csv(caminho_base_posts, index=False)
+
+
 def ETL_posts():
     """
     Função que reduz ao máximo os registros a serem analisados
